@@ -1,0 +1,38 @@
+# Конфигурация OreControl
+# enabled: true/false - включить/выключить плагин
+# Если false, плагин не будет обрабатывать генерацию руды
+enabled: true
+
+# Множитель частоты спавна руды
+# 1.0 = нормальная частота (по умолчанию)
+# 0.5 = в 2 раза меньше
+# 2.0 = в 2 раза больше
+# 0.0 = отключить спавн этой руды
+
+worlds:
+  world:
+    # Обычные руды
+    coal_ore: 1.0
+    deepslate_coal_ore: 1.0
+    copper_ore: 1.0
+    deepslate_copper_ore: 1.0
+    iron_ore: 1.0
+    deepslate_iron_ore: 1.0
+    gold_ore: 1.0
+    deepslate_gold_ore: 1.0
+    diamond_ore: 1.0
+    deepslate_diamond_ore: 1.0
+    redstone_ore: 1.0
+    deepslate_redstone_ore: 1.0
+    lapis_ore: 1.0
+    deepslate_lapis_ore: 1.0
+    emerald_ore: 1.0
+    deepslate_emerald_ore: 1.0
+    raw_iron_block: 1.0
+    raw_copper_block: 1.0
+
+  world_nether:
+    # Адские руды
+    nether_gold_ore: 1.0
+    nether_quartz_ore: 1.0
+    ancient_debris: 1.0

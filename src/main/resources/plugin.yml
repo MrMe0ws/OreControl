@@ -1,0 +1,23 @@
+name: OreControl
+version: '${project.version}'
+main: ru.orecontrol.OreControl
+api-version: '1.21'
+author: MrMeows
+description: Плагин для настройки частоты спавна руды в Minecraft
+
+commands:
+  orecontrol:
+    description: Управление плагином OreControl
+    usage: /<command> [reload]
+    aliases: [oc]
+    permission: orecontrol.use
+    permission-message: У вас нет прав для использования этой команды
+
+permissions:
+  orecontrol.use:
+    description: Базовое право на использование команды
+    default: op
+  orecontrol.reload:
+    description: Право на перезагрузку конфигурации
+    default: op
+
