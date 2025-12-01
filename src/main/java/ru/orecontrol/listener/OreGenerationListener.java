@@ -11,6 +11,8 @@ import ru.orecontrol.OreControl;
 import ru.orecontrol.config.ConfigManager;
 import ru.orecontrol.generator.CustomOrePopulator;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
 public class OreGenerationListener implements Listener {
@@ -66,29 +68,38 @@ public class OreGenerationListener implements Listener {
                 Material.ANCIENT_DEBRIS
         };
 
-        // Оптимизация: проверяем только те руды, для которых есть настройки
+        // Создаем карту руд, которые нужно заменить (множитель != 1.0)
+        Map<Material, Material> replacementMap = new HashMap<>();
         for (Material ore : ores) {
             double multiplier = configManager.getOreMultiplier(world, ore);
             // Пропускаем, если множитель = 1.0 (стандартная генерация)
-            if (multiplier == 1.0) {
-                continue;
+            if (multiplier != 1.0) {
+                replacementMap.put(ore, getReplacementBlock(ore, world));
             }
+        }
 
-            // Удаляем только эту конкретную руду, используя chunk.getBlock() для избежания
-            // рекурсии
-            for (int x = 0; x < 16; x++) {
-                for (int z = 0; z < 16; z++) {
-                    int minY = world.getMinHeight();
-                    int maxY = world.getMaxHeight();
+        // Если нет руд для замены, выходим
+        if (replacementMap.isEmpty()) {
+            return;
+        }
 
-                    for (int y = minY; y < maxY; y++) {
+        // Оптимизация: проходим по блокам только один раз, проверяя все руды одновременно
+        // Используем ChunkSnapshot для более быстрого чтения
+        org.bukkit.ChunkSnapshot snapshot = chunk.getChunkSnapshot();
+        int minY = world.getMinHeight();
+        int maxY = world.getMaxHeight();
+
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                for (int y = minY; y < maxY; y++) {
+                    Material blockType = snapshot.getBlockType(x, y, z);
+                    Material replacement = replacementMap.get(blockType);
+                    
+                    if (replacement != null) {
+                        // Используем chunk.getBlock() только когда нужно изменить блок
                         Block block = chunk.getBlock(x, y, z);
-                        if (block.getType() == ore) {
-                            // Определяем, на что заменять
-                            Material replacement = getReplacementBlock(ore, world);
-                            // Отключаем обновление физики, чтобы избежать загрузки соседних чанков
-                            block.setType(replacement, false);
-                        }
+                        // Отключаем обновление физики, чтобы избежать загрузки соседних чанков
+                        block.setType(replacement, false);
                     }
                 }
             }
