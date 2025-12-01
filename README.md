@@ -11,6 +11,13 @@
   - Глубинные версии всех руд (deepslate)
   - Адские руды: кварц, золотая адская руда, незерит
 
+Настройки генерации руд на 0.1
+<img width="1230" height="632" alt="image" src="https://github.com/user-attachments/assets/799ee211-5155-4638-9163-b015eaa932a7" />
+
+Стандартные настройки генерации руд 1.0
+<img width="1230" height="632" alt="image" src="https://github.com/user-attachments/assets/e21acdcc-e04d-4ac7-a828-bded04b4a000" />
+
+
 ## Установка
 
 1. Соберите плагин с помощью Maven:
