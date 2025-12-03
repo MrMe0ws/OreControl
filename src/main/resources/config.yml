@@ -148,7 +148,7 @@ nfc-generation:
 
       # Угольная руда - используется CONCENTRATED (концентрированные скопления)
       # В коде: всегда генерируется (без условия) + цикл 1-2 раза
-      # Увеличено attempts до 4, чтобы компенсировать жилы, которые могут генерироваться за пределами чанка
+      # Увеличено attempts для более частого спавна
       coal_ore:
         multiplier: 1.0
         generator-type: concentrated
@@ -156,7 +156,7 @@ nfc-generation:
         radius: 5
         veins: 2
         vein-size: 16
-        attempts: 4 # for (int k2 = 0; k2 < (1 + rand.nextInt(2)); k2++) - среднее 1-2, но увеличено для компенсации
+        attempts: 6 # Увеличено для более частого спавна
       deepslate_coal_ore:
         multiplier: 1.0
         generator-type: concentrated
@@ -186,34 +186,35 @@ nfc-generation:
         attempts: 4
 
       # Железная руда - используется CLOUD (облака, редкая)
-      # В коде: rand.nextInt(42) <= 2, шанс 3/42
+      # Увеличено base-chance и amount для более частого спавна
       iron_ore:
         multiplier: 1.0
         generator-type: cloud
-        base-chance: 0.071429 # rand.nextInt(42) <= 2, шанс 3/42 ≈ 0.071429
+        base-chance: 0.1 # Увеличено для более частого спавна
         radius: 10
         density: 2
-        amount: 100
+        amount: 150 # Увеличено количество блоков в облаке
       deepslate_iron_ore:
         multiplier: 1.0
         generator-type: cloud
-        base-chance: 0.071429
+        base-chance: 0.1 # Увеличено для более частого спавна
         radius: 10
         density: 2
-        amount: 100
+        amount: 150 # Увеличено количество блоков в облаке
 
       # Золотая руда - используется CLOUD (облака, редкая)
+      # Увеличено base-chance для более частого спавна
       gold_ore:
         multiplier: 1.0
         generator-type: cloud
-        base-chance: 0.2 # Увеличено для более частого спавна
+        base-chance: 0.5 # Увеличено для более частого спавна
         radius: 10
         density: 0
         amount: 32
       deepslate_gold_ore:
         multiplier: 1.0
         generator-type: cloud
-        base-chance: 0.2 # Увеличено для более частого спавна
+        base-chance: 0.5 # Увеличено для более частого спавна
         radius: 10
         density: 0
         amount: 32
@@ -223,15 +224,15 @@ nfc-generation:
       diamond_ore:
         multiplier: 1.0
         generator-type: minable
-        base-chance: 0.2 # Увеличено для более частого спавна
+        base-chance: 0.5 # Увеличено для более частого спавна
         vein-size: 8
-        attempts: 2 # Увеличено количество попыток генерации
+        attempts: 3 # Увеличено количество попыток генерации
       deepslate_diamond_ore:
         multiplier: 1.0
         generator-type: minable
-        base-chance: 0.2 # Увеличено для более частого спавна
+        base-chance: 0.5 # Увеличено для более частого спавна
         vein-size: 8
-        attempts: 2 # Увеличено количество попыток генерации
+        attempts: 3 # Увеличено количество попыток генерации
 
       # Редстоун руда - используется MINABLE (частая)
       # В коде: for (int k2 = 0; k2 < 3; k2++) - всегда генерируется 3 раза
@@ -249,18 +250,19 @@ nfc-generation:
         attempts: 3
 
       # Лазурит руда - используется MINABLE (частая)
+      # Увеличено attempts для более частого спавна
       lapis_ore:
         multiplier: 1.0
         generator-type: minable
         base-chance: 1.0 # rand.nextInt(2) == 1, 1/2
         vein-size: 6
-        attempts: 2 # Увеличено для более частого спавна
+        attempts: 5 # Увеличено для более частого спавна
       deepslate_lapis_ore:
         multiplier: 1.0
         generator-type: minable
         base-chance: 1.0
-        vein-size: 6
-        attempts: 2 # Увеличено для более частого спавна
+        vein-size: 8 # Увеличено для более крупных жил
+        attempts: 4 # Увеличено для более частого спавна
 
       # Изумрудная руда - используется MINABLE
       # Используется ванильная генерация (высокие горы, от -16 до 320)

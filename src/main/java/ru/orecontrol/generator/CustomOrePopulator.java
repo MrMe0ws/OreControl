@@ -515,14 +515,19 @@ public class CustomOrePopulator extends BlockPopulator {
                     block == Material.GRANITE || block == Material.DIORITE ||
                     block == Material.ANDESITE || block == Material.TUFF;
         } else if (ore.name().contains("DEEPSLATE")) {
-            return block == Material.DEEPSLATE || block == Material.TUFF || block == Material.STONE;
+            // Deepslate руды могут заменять глубинный сланец, туф и камень
+            return block == Material.DEEPSLATE || block == Material.TUFF ||
+                    block == Material.STONE || block == Material.GRANITE ||
+                    block == Material.DIORITE || block == Material.ANDESITE;
         } else if (ore == Material.NETHER_QUARTZ_ORE || ore == Material.NETHER_GOLD_ORE) {
             return block == Material.NETHERRACK || block == Material.BASALT || block == Material.BLACKSTONE;
         } else if (ore == Material.ANCIENT_DEBRIS) {
             return block == Material.NETHERRACK;
         } else {
+            // Обычные руды могут заменять камень, гранит, диорит, андезит и туф
             return block == Material.STONE || block == Material.GRANITE ||
-                    block == Material.DIORITE || block == Material.ANDESITE;
+                    block == Material.DIORITE || block == Material.ANDESITE ||
+                    block == Material.TUFF;
         }
     }
 }
