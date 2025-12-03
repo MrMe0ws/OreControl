@@ -18,9 +18,10 @@ public class OreNFCConfig {
     private final int density;
     private final int amount;
     private final int veins;
+    private final int attempts; // Количество попыток генерации за чанк (для руд, которые генерируются несколько раз)
 
     public OreNFCConfig(Material material, double multiplier, GeneratorType generatorType,
-                       double baseChance, int veinSize, int radius, int density, int amount, int veins) {
+                       double baseChance, int veinSize, int radius, int density, int amount, int veins, int attempts) {
         this.material = material;
         this.multiplier = multiplier;
         this.generatorType = generatorType;
@@ -30,6 +31,7 @@ public class OreNFCConfig {
         this.density = density;
         this.amount = amount;
         this.veins = veins;
+        this.attempts = attempts;
     }
 
     public Material getMaterial() {
@@ -66,6 +68,10 @@ public class OreNFCConfig {
 
     public int getVeins() {
         return veins;
+    }
+
+    public int getAttempts() {
+        return attempts;
     }
 
     // Вычисляет финальный шанс с учетом множителя

@@ -11,6 +11,8 @@ import ru.orecontrol.generator.nfc.NFCWorldGenConcentrated;
 import ru.orecontrol.generator.nfc.NFCWorldGenMinable;
 import ru.orecontrol.generator.nfc.NFCWorldGenMinableCloud;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
 public class CustomOrePopulator extends BlockPopulator {
@@ -39,106 +41,177 @@ public class CustomOrePopulator extends BlockPopulator {
 
     @Override
     public void populate(World world, Random random, Chunk chunk) {
+        // Статистика для логирования (если включено)
+        boolean debugEnabled = configManager.isDebugLogging();
+        Map<Material, Integer> oreStats = debugEnabled ? new HashMap<>() : null;
+
+        // Отладочный лог для проверки вызова populate (только для отладки)
+        // if (debugEnabled) {
+        // configManager.getPlugin().getLogger().info("DEBUG: Populate вызван для чанка
+        // [" + chunk.getX() + ", " + chunk.getZ() + "] в мире '" + world.getName() +
+        // "'");
+        // }
+
         // Проверяем, используется ли NFC-generation
         if (configManager.isNFCGeneration()) {
             // Используем NFC-генерацию
             if (world.getEnvironment() == World.Environment.NORMAL) {
-                generateNFCOverworldOres(world, random, chunk);
+                generateNFCOverworldOres(world, random, chunk, oreStats);
             } else if (world.getEnvironment() == World.Environment.NETHER) {
-                generateNFCNetherOres(world, random, chunk);
+                generateNFCNetherOres(world, random, chunk, oreStats);
             }
         } else {
             // Используем старую логику
             if (world.getEnvironment() == World.Environment.NORMAL) {
-                generateOverworldOres(world, random, chunk);
+                generateOverworldOres(world, random, chunk, oreStats);
             } else if (world.getEnvironment() == World.Environment.NETHER) {
-                generateNetherOres(world, random, chunk);
+                generateNetherOres(world, random, chunk, oreStats);
+            }
+        }
+
+        // Выводим статистику, если включено логирование
+        if (configManager.isDebugLogging()) {
+            if (oreStats == null) {
+                configManager.getPlugin().getLogger()
+                        .warning("DEBUG: oreStats is null для чанка [" + chunk.getX() + ", " + chunk.getZ() + "]");
+            } else if (oreStats.isEmpty()) {
+                // Не выводим лог для пустых чанков - это нормально (руда генерируется не в
+                // каждом чанке)
+            } else {
+                int chunkX = chunk.getX();
+                int chunkZ = chunk.getZ();
+                StringBuilder log = new StringBuilder(
+                        "Чанк [" + chunkX + ", " + chunkZ + "] в мире '" + world.getName() + "': ");
+                boolean first = true;
+                for (Map.Entry<Material, Integer> entry : oreStats.entrySet()) {
+                    if (!first)
+                        log.append(", ");
+                    log.append(entry.getKey().name()).append("=").append(entry.getValue());
+                    first = false;
+                }
+                configManager.getPlugin().getLogger().info(log.toString());
             }
         }
     }
 
-    private void generateOverworldOres(World world, Random random, Chunk chunk) {
+    private void generateOverworldOres(World world, Random random, Chunk chunk, Map<Material, Integer> oreStats) {
         // Угольная руда
-        generateOre(world, random, chunk,
+        int count = generateOre(world, random, chunk,
                 Material.COAL_ORE, Material.DEEPSLATE_COAL_ORE,
                 COAL_VEINS_PER_CHUNK, 0, 192, 17);
+        if (oreStats != null) {
+            oreStats.put(Material.COAL_ORE, oreStats.getOrDefault(Material.COAL_ORE, 0) + count);
+        }
 
         // Медная руда
-        generateOre(world, random, chunk,
+        count = generateOre(world, random, chunk,
                 Material.COPPER_ORE, Material.DEEPSLATE_COPPER_ORE,
                 COPPER_VEINS_PER_CHUNK, -16, 112, 10);
+        if (oreStats != null) {
+            oreStats.put(Material.COPPER_ORE, oreStats.getOrDefault(Material.COPPER_ORE, 0) + count);
+        }
 
         // Железная руда
-        generateOre(world, random, chunk,
+        count = generateOre(world, random, chunk,
                 Material.IRON_ORE, Material.DEEPSLATE_IRON_ORE,
                 IRON_VEINS_PER_CHUNK, -64, 72, 9);
+        if (oreStats != null) {
+            oreStats.put(Material.IRON_ORE, oreStats.getOrDefault(Material.IRON_ORE, 0) + count);
+        }
 
         // Золотая руда
-        generateOre(world, random, chunk,
+        count = generateOre(world, random, chunk,
                 Material.GOLD_ORE, Material.DEEPSLATE_GOLD_ORE,
                 GOLD_VEINS_PER_CHUNK, -64, 32, 9);
+        if (oreStats != null) {
+            oreStats.put(Material.GOLD_ORE, oreStats.getOrDefault(Material.GOLD_ORE, 0) + count);
+        }
 
         // Алмазная руда
-        generateOre(world, random, chunk,
+        count = generateOre(world, random, chunk,
                 Material.DIAMOND_ORE, Material.DEEPSLATE_DIAMOND_ORE,
                 DIAMOND_VEINS_PER_CHUNK, -64, 16, 8);
+        if (oreStats != null) {
+            oreStats.put(Material.DIAMOND_ORE, oreStats.getOrDefault(Material.DIAMOND_ORE, 0) + count);
+        }
 
         // Редстоун руда
-        generateOre(world, random, chunk,
+        count = generateOre(world, random, chunk,
                 Material.REDSTONE_ORE, Material.DEEPSLATE_REDSTONE_ORE,
                 REDSTONE_VEINS_PER_CHUNK, -64, 16, 8);
+        if (oreStats != null) {
+            oreStats.put(Material.REDSTONE_ORE, oreStats.getOrDefault(Material.REDSTONE_ORE, 0) + count);
+        }
 
         // Лазурит руда
-        generateOre(world, random, chunk,
+        count = generateOre(world, random, chunk,
                 Material.LAPIS_ORE, Material.DEEPSLATE_LAPIS_ORE,
                 LAPIS_VEINS_PER_CHUNK, -64, 64, 7);
+        if (oreStats != null) {
+            oreStats.put(Material.LAPIS_ORE, oreStats.getOrDefault(Material.LAPIS_ORE, 0) + count);
+        }
 
         // Изумрудная руда
-        generateOre(world, random, chunk,
+        count = generateOre(world, random, chunk,
                 Material.EMERALD_ORE, Material.DEEPSLATE_EMERALD_ORE,
                 EMERALD_VEINS_PER_CHUNK, -16, 320, 3);
+        if (oreStats != null) {
+            oreStats.put(Material.EMERALD_ORE, oreStats.getOrDefault(Material.EMERALD_ORE, 0) + count);
+        }
 
         // Блоки сырого железа
-        generateOre(world, random, chunk,
+        count = generateOre(world, random, chunk,
                 Material.RAW_IRON_BLOCK, null,
                 RAW_IRON_BLOCK_VEINS_PER_CHUNK, -64, 64, 5);
+        if (oreStats != null) {
+            oreStats.put(Material.RAW_IRON_BLOCK, oreStats.getOrDefault(Material.RAW_IRON_BLOCK, 0) + count);
+        }
 
         // Блоки сырой меди
-        generateOre(world, random, chunk,
+        count = generateOre(world, random, chunk,
                 Material.RAW_COPPER_BLOCK, null,
                 RAW_COPPER_BLOCK_VEINS_PER_CHUNK, -64, 64, 5);
+        if (oreStats != null) {
+            oreStats.put(Material.RAW_COPPER_BLOCK, oreStats.getOrDefault(Material.RAW_COPPER_BLOCK, 0) + count);
+        }
     }
 
-    private void generateNetherOres(World world, Random random, Chunk chunk) {
+    private void generateNetherOres(World world, Random random, Chunk chunk, Map<Material, Integer> oreStats) {
         // Кварц руда
-        generateOre(world, random, chunk,
+        int count = generateOre(world, random, chunk,
                 Material.NETHER_QUARTZ_ORE, null,
                 NETHER_QUARTZ_VEINS_PER_CHUNK, 10, 117, 14);
+        if (oreStats != null) {
+            oreStats.put(Material.NETHER_QUARTZ_ORE, oreStats.getOrDefault(Material.NETHER_QUARTZ_ORE, 0) + count);
+        }
 
         // Золотая адская руда
-        generateOre(world, random, chunk,
+        count = generateOre(world, random, chunk,
                 Material.NETHER_GOLD_ORE, null,
                 NETHER_GOLD_VEINS_PER_CHUNK, 10, 117, 10);
+        if (oreStats != null) {
+            oreStats.put(Material.NETHER_GOLD_ORE, oreStats.getOrDefault(Material.NETHER_GOLD_ORE, 0) + count);
+        }
 
         // Незерит
-        generateOre(world, random, chunk,
+        count = generateOre(world, random, chunk,
                 Material.ANCIENT_DEBRIS, null,
                 ANCIENT_DEBRIS_VEINS_PER_CHUNK, 8, 119, 2);
+        if (oreStats != null) {
+            oreStats.put(Material.ANCIENT_DEBRIS, oreStats.getOrDefault(Material.ANCIENT_DEBRIS, 0) + count);
+        }
     }
 
     // NFC-генерация для обычного мира
-    // ВАЖНО: Генерируем и обычные, и deepslate версии руд отдельно
-    // Это позволяет независимо контролировать их генерацию через конфиг
-    // Deepslate руды (1.19+) генерируются отдельно и имеют свои настройки
-    private void generateNFCOverworldOres(World world, Random random, Chunk chunk) {
+    // Генерируем только обычные версии руд - deepslate версии определяются
+    // автоматически по высоте
+    // Это предотвращает двойную генерацию (обычная + deepslate) и упрощает
+    // конфигурацию
+    private void generateNFCOverworldOres(World world, Random random, Chunk chunk, Map<Material, Integer> oreStats) {
         Material[] ores = {
-                // Обычные руды
+                // Обычные руды (deepslate версии определяются автоматически по высоте)
                 Material.COAL_ORE, Material.COPPER_ORE, Material.IRON_ORE, Material.GOLD_ORE,
                 Material.DIAMOND_ORE, Material.REDSTONE_ORE, Material.LAPIS_ORE, Material.EMERALD_ORE,
-                // Deepslate руды (1.19+)
-                Material.DEEPSLATE_COAL_ORE, Material.DEEPSLATE_COPPER_ORE, Material.DEEPSLATE_IRON_ORE,
-                Material.DEEPSLATE_GOLD_ORE, Material.DEEPSLATE_DIAMOND_ORE, Material.DEEPSLATE_REDSTONE_ORE,
-                Material.DEEPSLATE_LAPIS_ORE, Material.DEEPSLATE_EMERALD_ORE,
                 // Блоки сырого железа и меди
                 Material.RAW_IRON_BLOCK, Material.RAW_COPPER_BLOCK
         };
@@ -147,12 +220,15 @@ public class CustomOrePopulator extends BlockPopulator {
         int chunkZ = chunk.getZ() * 16;
 
         for (Material ore : ores) {
-            generateNFCOre(world, random, chunk, chunkX, chunkZ, ore);
+            int count = generateNFCOre(world, random, chunk, chunkX, chunkZ, ore);
+            if (oreStats != null && count > 0) {
+                oreStats.put(ore, oreStats.getOrDefault(ore, 0) + count);
+            }
         }
     }
 
     // NFC-генерация для ада
-    private void generateNFCNetherOres(World world, Random random, Chunk chunk) {
+    private void generateNFCNetherOres(World world, Random random, Chunk chunk, Map<Material, Integer> oreStats) {
         Material[] ores = {
                 Material.NETHER_QUARTZ_ORE,
                 Material.NETHER_GOLD_ORE,
@@ -163,33 +239,33 @@ public class CustomOrePopulator extends BlockPopulator {
         int chunkZ = chunk.getZ() * 16;
 
         for (Material ore : ores) {
-            generateNFCOre(world, random, chunk, chunkX, chunkZ, ore);
+            int count = generateNFCOre(world, random, chunk, chunkX, chunkZ, ore);
+            if (oreStats != null && count > 0) {
+                oreStats.put(ore, oreStats.getOrDefault(ore, 0) + count);
+            }
         }
     }
 
     // Генерация руды с использованием NFC-логики
-    private void generateNFCOre(World world, Random random, Chunk chunk, int chunkX, int chunkZ, Material oreType) {
+    // Возвращает количество размещенных блоков руды
+    private int generateNFCOre(World world, Random random, Chunk chunk, int chunkX, int chunkZ, Material oreType) {
         OreNFCConfig config = configManager.getOreNFCConfig(world, oreType);
 
         // Если нет конфига для этой руды, пропускаем
         if (config == null) {
-            return;
+            return 0;
         }
 
         // Если множитель 0, не генерируем
         if (config.getMultiplier() == 0.0) {
-            return;
+            return 0;
         }
 
         // Вычисляем финальный шанс с учетом множителя
         double finalChance = config.getFinalChance();
+        int attempts = config.getAttempts();
 
-        // Проверяем шанс генерации
-        if (random.nextDouble() >= finalChance) {
-            return;
-        }
-
-        // Определяем глубинный вариант
+        // Определяем глубинный вариант (делаем это один раз, до цикла)
         Material deepslateType = null;
         Material baseOreType = oreType;
 
@@ -210,33 +286,49 @@ public class CustomOrePopulator extends BlockPopulator {
         // Определяем блок, в котором генерируется руда
         Material generateIn = getGenerateInBlock(world, oreType);
 
-        // Генерируем случайную позицию в чанке
-        int x = chunkX + random.nextInt(16);
-        int z = chunkZ + random.nextInt(16);
-        int y = getRandomY(world, oreType, random);
+        // Генерируем руду несколько раз, если attempts > 1
+        // В оригинальном коде Beta 1.7.3 некоторые руды генерировались в циклах
+        int totalBlocksPlaced = 0;
+        for (int attempt = 0; attempt < attempts; attempt++) {
+            // Проверяем шанс генерации для каждой попытки
+            // Если base-chance = 1.0, всегда генерируем (как в оригинале)
+            if (finalChance < 1.0 && random.nextDouble() >= finalChance) {
+                continue; // Пропускаем эту попытку
+            }
 
-        // Генерируем в зависимости от типа генератора
-        switch (config.getGeneratorType()) {
-            case MINABLE:
-                NFCWorldGenMinable minable = new NFCWorldGenMinable(
-                        baseOreType, deepslateType, config.getVeinSize(), generateIn);
-                minable.generate(world, random, chunk, chunkX, chunkZ, x, y, z);
-                break;
+            // Генерируем случайную позицию в чанке для каждой попытки
+            int x = chunkX + random.nextInt(16);
+            int z = chunkZ + random.nextInt(16);
+            int y = getRandomY(world, oreType, random);
 
-            case CONCENTRATED:
-                NFCWorldGenConcentrated concentrated = new NFCWorldGenConcentrated(
-                        baseOreType, deepslateType, config.getRadius(), config.getVeins(),
-                        config.getVeinSize(), generateIn);
-                concentrated.generate(world, random, chunk, chunkX, chunkZ, x, y, z);
-                break;
+            // Генерируем в зависимости от типа генератора
+            int blocksPlaced = 0;
+            switch (config.getGeneratorType()) {
+                case MINABLE:
+                    NFCWorldGenMinable minable = new NFCWorldGenMinable(
+                            baseOreType, deepslateType, config.getVeinSize(), generateIn);
+                    blocksPlaced = minable.generate(world, random, chunk, chunkX, chunkZ, x, y, z);
+                    break;
 
-            case CLOUD:
-                NFCWorldGenMinableCloud cloud = new NFCWorldGenMinableCloud(
-                        baseOreType, deepslateType, config.getRadius(), config.getDensity(),
-                        config.getAmount(), generateIn);
-                cloud.generate(world, random, chunk, chunkX, chunkZ, x, y, z);
-                break;
+                case CONCENTRATED:
+                    NFCWorldGenConcentrated concentrated = new NFCWorldGenConcentrated(
+                            baseOreType, deepslateType, config.getRadius(), config.getVeins(),
+                            config.getVeinSize(), generateIn);
+                    blocksPlaced = concentrated.generate(world, random, chunk, chunkX, chunkZ, x, y, z);
+                    break;
+
+                case CLOUD:
+                    NFCWorldGenMinableCloud cloud = new NFCWorldGenMinableCloud(
+                            baseOreType, deepslateType, config.getRadius(), config.getDensity(),
+                            config.getAmount(), generateIn);
+                    blocksPlaced = cloud.generate(world, random, chunk, chunkX, chunkZ, x, y, z);
+                    break;
+            }
+
+            totalBlocksPlaced += blocksPlaced;
         }
+
+        return totalBlocksPlaced;
     }
 
     private Material getGenerateInBlock(World world, Material ore) {
@@ -267,21 +359,46 @@ public class CustomOrePopulator extends BlockPopulator {
         int y;
 
         if (oreName.equals("COAL_ORE")) {
-            y = isDeepslate ? random.nextInt(64) - 64 : random.nextInt(192);
+            // Уголь: оригинал 0-81 (CONCENTRATED) и 48-95 (MINABLE)
+            // Адаптируем: обычный уголь -64 до 95 (полный диапазон, deepslate генерируется
+            // автоматически ниже Y=0)
+            y = isDeepslate ? random.nextInt(64) - 64 : random.nextInt(160) - 64;
         } else if (oreName.equals("COPPER_ORE")) {
-            y = isDeepslate ? random.nextInt(64) - 64 : random.nextInt(128) - 16;
+            // Медь: оригинал 38-81
+            // Адаптируем: обычная медь -64 до 81 (полный диапазон, deepslate генерируется
+            // автоматически ниже Y=0)
+            y = isDeepslate ? random.nextInt(64) - 64 : random.nextInt(146) - 64;
         } else if (oreName.equals("IRON_ORE")) {
-            y = isDeepslate ? random.nextInt(64) - 64 : random.nextInt(136) - 64;
+            // Железо: оригинал 2-33
+            // Адаптируем: обычное железо -64 до 33 (полный диапазон, deepslate генерируется
+            // автоматически ниже Y=0)
+            y = isDeepslate ? random.nextInt(64) - 64 : random.nextInt(98) - 64;
         } else if (oreName.equals("GOLD_ORE")) {
-            y = isDeepslate ? random.nextInt(32) - 64 : random.nextInt(96) - 64;
+            // Золото: оригинал 0-59
+            // Адаптируем: обычное золото -64 до 59 (полный диапазон, deepslate генерируется
+            // автоматически ниже Y=0)
+            y = isDeepslate ? random.nextInt(64) - 64 : random.nextInt(124) - 64;
         } else if (oreName.equals("DIAMOND_ORE")) {
-            y = isDeepslate ? random.nextInt(16) - 64 : random.nextInt(80) - 64;
+            // Алмаз: оригинал 0-15
+            // Адаптируем: обычный алмаз -64 до 15 (полный диапазон, deepslate генерируется
+            // автоматически ниже Y=0)
+            y = isDeepslate ? random.nextInt(64) - 64 : random.nextInt(80) - 64;
         } else if (oreName.equals("REDSTONE_ORE")) {
-            y = isDeepslate ? random.nextInt(16) - 64 : random.nextInt(80) - 64;
+            // Редстоун: оригинал 0-15
+            // Адаптируем: обычный редстоун -64 до 15 (полный диапазон, deepslate
+            // генерируется автоматически ниже Y=0)
+            y = isDeepslate ? random.nextInt(64) - 64 : random.nextInt(80) - 64;
         } else if (oreName.equals("LAPIS_ORE")) {
-            y = isDeepslate ? random.nextInt(32) - 64 : random.nextInt(128) - 64;
+            // Лазурит: оригинал 0-31
+            // Адаптируем: обычный лазурит -64 до 31 (полный диапазон, deepslate
+            // генерируется автоматически ниже Y=0)
+            y = isDeepslate ? random.nextInt(64) - 64 : random.nextInt(96) - 64;
         } else if (oreName.equals("EMERALD_ORE")) {
-            y = isDeepslate ? random.nextInt(16) - 64 : random.nextInt(336) - 16;
+            // Изумруд: используем ванильную генерацию (высокие горы)
+            // В ваниле изумруды генерируются от -16 до 320, но чаще в горах
+            // Обычный изумруд: -16 до 320 (ванильный диапазон)
+            // Deepslate изумруд: -64 до -16 (глубинные слои)
+            y = isDeepslate ? random.nextInt(48) - 64 : random.nextInt(336) - 16;
         } else if (ore == Material.RAW_IRON_BLOCK || ore == Material.RAW_COPPER_BLOCK) {
             y = random.nextInt(128) - 64;
         } else if (ore == Material.NETHER_QUARTZ_ORE) {
@@ -299,15 +416,16 @@ public class CustomOrePopulator extends BlockPopulator {
         return Math.max(world.getMinHeight(), Math.min(world.getMaxHeight() - 1, y));
     }
 
-    private void generateOre(World world, Random random, Chunk chunk,
+    private int generateOre(World world, Random random, Chunk chunk,
             Material oreType, Material deepslateType,
             int baseVeins, int minY, int maxY, int veinSize) {
 
         double multiplier = configManager.getOreMultiplier(world, oreType);
+        int totalBlocks = 0;
 
         // Если множитель 0, не генерируем эту руду
         if (multiplier == 0.0) {
-            return;
+            return 0;
         }
 
         // Вычисляем количество жил с учетом множителя
@@ -328,7 +446,7 @@ public class CustomOrePopulator extends BlockPopulator {
             }
 
             // Генерируем жилу руды
-            generateVein(chunk, random, localX, y, localZ, targetOre, veinSize);
+            totalBlocks += generateVein(chunk, random, localX, y, localZ, targetOre, veinSize);
         }
 
         // Также генерируем глубинный вариант отдельно, если он есть
@@ -336,18 +454,25 @@ public class CustomOrePopulator extends BlockPopulator {
             double deepslateMultiplier = configManager.getOreMultiplier(world, deepslateType);
             if (deepslateMultiplier != 0.0 && deepslateMultiplier != multiplier) {
                 int deepslateVeins = (int) Math.round(baseVeins * deepslateMultiplier);
+                int deepslateBlocks = 0;
                 for (int i = 0; i < deepslateVeins; i++) {
                     int localX = random.nextInt(16);
                     int localZ = random.nextInt(16);
                     int y = random.nextInt(Math.abs(minY)) - Math.abs(minY); // Только отрицательные Y
-                    generateVein(chunk, random, localX, y, localZ, deepslateType, veinSize);
+                    deepslateBlocks += generateVein(chunk, random, localX, y, localZ, deepslateType, veinSize);
                 }
+                // Добавляем deepslate блоки к общему счету (они считаются как часть основной
+                // руды)
+                totalBlocks += deepslateBlocks;
             }
         }
+
+        return totalBlocks;
     }
 
-    private void generateVein(Chunk chunk, Random random, int localX, int y, int localZ, Material ore, int size) {
+    private int generateVein(Chunk chunk, Random random, int localX, int y, int localZ, Material ore, int size) {
         World world = chunk.getWorld();
+        int blocksPlaced = 0;
 
         // Простая генерация жилы руды
         for (int i = 0; i < size; i++) {
@@ -376,8 +501,11 @@ public class CustomOrePopulator extends BlockPopulator {
             // Отключаем обновление физики, чтобы избежать загрузки соседних чанков
             if (isReplaceableBlock(currentType, ore)) {
                 block.setType(ore, false);
+                blocksPlaced++;
             }
         }
+
+        return blocksPlaced;
     }
 
     private boolean isReplaceableBlock(Material block, Material ore) {

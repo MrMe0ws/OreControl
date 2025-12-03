@@ -3,13 +3,19 @@
 # Если false, плагин не будет обрабатывать генерацию руды
 enabled: true
 
-# nfc-generation: true/false - включить/выключить NFC-генерацию (редкая генерация из бета 1.7.3)
+# use-nfc-generation: true/false - включить/выключить NFC-генерацию (редкая генерация из бета 1.7.3)
 # Если true, используется логика с шансами и разными типами генераторов (настройки из секции nfc-generation)
 # Если false, используется старая логика с фиксированным количеством жил (настройки из секции default-generation)
-nfc-generation: true
+use-nfc-generation: true
+
+# debug-logging: true/false - включить/выключить отладочное логирование генерации руды
+# Если true, в консоль будут выводиться логи о том, сколько какой руды было сгенерировано
+# Полезно для отладки и проверки правильности работы генерации
+# ВАЖНО: отключите в продакшене, так как это может засорить логи!
+debug-logging: false
 
 # ============================================================================
-# СТАРАЯ ЛОГИКА (default-generation) - используется когда nfc-generation: false
+# СТАРАЯ ЛОГИКА (default-generation) - используется когда use-nfc-generation: false
 # ============================================================================
 # Множитель частоты спавна руды
 # 1.0 = нормальная частота (по умолчанию)
@@ -52,7 +58,7 @@ default-generation:
       ancient_debris: 1.0
 
 # ============================================================================
-# NFC-ГЕНЕРАЦИЯ (nfc-generation) - используется когда nfc-generation: true
+# NFC-ГЕНЕРАЦИЯ (nfc-generation) - используется когда use-nfc-generation: true
 # ============================================================================
 # Расширенный формат настроек для каждой руды:
 #
@@ -111,6 +117,14 @@ default-generation:
 #   - Определяет, сколько отдельных жил будет сгенерировано в радиусе
 #   - Обычно от 2 до 6
 #
+# attempts: Количество попыток генерации за чанк
+#   - Определяет, сколько раз будет попытка сгенерировать руду в одном чанке
+#   - 1 = одна попытка (по умолчанию для большинства руд)
+#   - 2-6 = несколько попыток (для руд, которые должны генерироваться чаще)
+#   - В оригинальном коде Beta 1.7.3: редстоун = 3, медь = 3-6, уголь = 1-2
+#   - Если base-chance = 1.0, руда генерируется на каждой попытке
+#   - Если base-chance < 1.0, шанс проверяется для каждой попытки отдельно
+#
 # ПРИМЕРЫ:
 # coal_ore:
 #   multiplier: 1.0
@@ -121,6 +135,7 @@ default-generation:
 #   density: 2               # Плотность (для cloud)
 #   amount: 80               # Количество точек (для cloud)
 #   veins: 3                 # Количество жил (для concentrated)
+#   attempts: 1              # Количество попыток генерации за чанк
 #
 # Или простой формат (только множитель, остальные параметры будут дефолтными):
 # coal_ore: 1.0
@@ -128,157 +143,172 @@ default-generation:
 nfc-generation:
   worlds:
     world:
-    # Обычные руды
-    # Настройки основаны на логике из бета 1.7.3
+      # Обычные руды
+      # Настройки основаны на логике из бета 1.7.3
 
-    # Угольная руда - используется CONCENTRATED (концентрированные скопления)
-    # В коде: всегда генерируется (без условия) + цикл 1-2 раза
-    coal_ore:
-      multiplier: 1.0
-      generator-type: concentrated
-      base-chance: 1.0 # Всегда генерируется (WorldGenConcentrated без условия)
-      radius: 5
-      veins: 2
-      vein-size: 16
-    deepslate_coal_ore:
-      multiplier: 1.0
-      generator-type: concentrated
-      base-chance: 1.0
-      radius: 5
-      veins: 2
-      vein-size: 16
+      # Угольная руда - используется CONCENTRATED (концентрированные скопления)
+      # В коде: всегда генерируется (без условия) + цикл 1-2 раза
+      # Увеличено attempts до 4, чтобы компенсировать жилы, которые могут генерироваться за пределами чанка
+      coal_ore:
+        multiplier: 1.0
+        generator-type: concentrated
+        base-chance: 1.0 # Всегда генерируется (WorldGenConcentrated без условия)
+        radius: 5
+        veins: 2
+        vein-size: 16
+        attempts: 4 # for (int k2 = 0; k2 < (1 + rand.nextInt(2)); k2++) - среднее 1-2, но увеличено для компенсации
+      deepslate_coal_ore:
+        multiplier: 1.0
+        generator-type: concentrated
+        base-chance: 1.0
+        radius: 5
+        veins: 2
+        vein-size: 16
+        attempts: 4
 
-    # Медная руда - используется CLOUD (облака)
-    # В коде: цикл 3-6 раз всегда + дополнительный шанс 1/3
-    copper_ore:
-      multiplier: 1.0
-      generator-type: cloud
-      base-chance: 1.0 # Генерируется всегда в цикле 3-6 раз
-      radius: 4
-      density: 1
-      amount: 16
-    deepslate_copper_ore:
-      multiplier: 1.0
-      generator-type: cloud
-      base-chance: 1.0
-      radius: 4
-      density: 1
-      amount: 16
+      # Медная руда - используется CLOUD (облака)
+      # В коде: цикл 3-6 раз всегда + дополнительный шанс 1/3
+      copper_ore:
+        multiplier: 1.0
+        generator-type: cloud
+        base-chance: 1.0 # Генерируется всегда в цикле 3-6 раз
+        radius: 4
+        density: 1
+        amount: 16
+        attempts: 4 # for (int k2 = 0; k2 < (3 + rand.nextInt(4)); k2++) - среднее 4-5
+      deepslate_copper_ore:
+        multiplier: 1.0
+        generator-type: cloud
+        base-chance: 1.0
+        radius: 4
+        density: 1
+        amount: 16
+        attempts: 4
 
-    # Железная руда - используется CLOUD (облака, редкая)
-    # В коде: rand.nextInt(42) <= 2, шанс 3/42
-    iron_ore:
-      multiplier: 1.0
-      generator-type: cloud
-      base-chance: 0.071429 # rand.nextInt(42) <= 2, шанс 3/42 ≈ 0.071429
-      radius: 16
-      density: 2
-      amount: 200
-    deepslate_iron_ore:
-      multiplier: 1.0
-      generator-type: cloud
-      base-chance: 0.071429
-      radius: 16
-      density: 2
-      amount: 200
+      # Железная руда - используется CLOUD (облака, редкая)
+      # В коде: rand.nextInt(42) <= 2, шанс 3/42
+      iron_ore:
+        multiplier: 1.0
+        generator-type: cloud
+        base-chance: 0.071429 # rand.nextInt(42) <= 2, шанс 3/42 ≈ 0.071429
+        radius: 10
+        density: 2
+        amount: 100
+      deepslate_iron_ore:
+        multiplier: 1.0
+        generator-type: cloud
+        base-chance: 0.071429
+        radius: 10
+        density: 2
+        amount: 100
 
-    # Золотая руда - используется CLOUD (облака, редкая)
-    gold_ore:
-      multiplier: 1.0
-      generator-type: cloud
-      base-chance: 0.0625 # rand.nextInt(16) == 1, 1/16
-      radius: 10
-      density: 0
-      amount: 32
-    deepslate_gold_ore:
-      multiplier: 1.0
-      generator-type: cloud
-      base-chance: 0.0625
-      radius: 10
-      density: 0
-      amount: 32
+      # Золотая руда - используется CLOUD (облака, редкая)
+      gold_ore:
+        multiplier: 1.0
+        generator-type: cloud
+        base-chance: 0.2 # Увеличено для более частого спавна
+        radius: 10
+        density: 0
+        amount: 32
+      deepslate_gold_ore:
+        multiplier: 1.0
+        generator-type: cloud
+        base-chance: 0.2 # Увеличено для более частого спавна
+        radius: 10
+        density: 0
+        amount: 32
 
-    # Алмазная руда - используется MINABLE (очень редкая)
-    diamond_ore:
-      multiplier: 1.0
-      generator-type: minable
-      base-chance: 0.04 # rand.nextInt(25) == 1, 1/25
-      vein-size: 8
-    deepslate_diamond_ore:
-      multiplier: 1.0
-      generator-type: minable
-      base-chance: 0.04
-      vein-size: 8
+      # Алмазная руда - используется MINABLE (очень редкая)
+      # Увеличено base-chance и attempts для более частого спавна
+      diamond_ore:
+        multiplier: 1.0
+        generator-type: minable
+        base-chance: 0.2 # Увеличено для более частого спавна
+        vein-size: 8
+        attempts: 2 # Увеличено количество попыток генерации
+      deepslate_diamond_ore:
+        multiplier: 1.0
+        generator-type: minable
+        base-chance: 0.2 # Увеличено для более частого спавна
+        vein-size: 8
+        attempts: 2 # Увеличено количество попыток генерации
 
-    # Редстоун руда - используется MINABLE (частая)
-    # В коде: for (int k2 = 0; k2 < 3; k2++) - всегда генерируется 3 раза
-    redstone_ore:
-      multiplier: 1.0
-      generator-type: minable
-      base-chance: 1.0 # Всегда генерируется 3 раза (цикл без условия)
-      vein-size: 7
-    deepslate_redstone_ore:
-      multiplier: 1.0
-      generator-type: minable
-      base-chance: 1.0
-      vein-size: 7
+      # Редстоун руда - используется MINABLE (частая)
+      # В коде: for (int k2 = 0; k2 < 3; k2++) - всегда генерируется 3 раза
+      redstone_ore:
+        multiplier: 1.0
+        generator-type: minable
+        base-chance: 1.0 # Всегда генерируется 3 раза (цикл без условия)
+        vein-size: 7
+        attempts: 3 # for (int k2 = 0; k2 < 3; k2++)
+      deepslate_redstone_ore:
+        multiplier: 1.0
+        generator-type: minable
+        base-chance: 1.0
+        vein-size: 7
+        attempts: 3
 
-    # Лазурит руда - используется MINABLE (частая)
-    lapis_ore:
-      multiplier: 1.0
-      generator-type: minable
-      base-chance: 0.5 # rand.nextInt(2) == 1, 1/2
-      vein-size: 6
-    deepslate_lapis_ore:
-      multiplier: 1.0
-      generator-type: minable
-      base-chance: 0.5
-      vein-size: 6
+      # Лазурит руда - используется MINABLE (частая)
+      lapis_ore:
+        multiplier: 1.0
+        generator-type: minable
+        base-chance: 1.0 # rand.nextInt(2) == 1, 1/2
+        vein-size: 6
+        attempts: 2 # Увеличено для более частого спавна
+      deepslate_lapis_ore:
+        multiplier: 1.0
+        generator-type: minable
+        base-chance: 1.0
+        vein-size: 6
+        attempts: 2 # Увеличено для более частого спавна
 
-    # Изумрудная руда - используется MINABLE (редкая)
-    # В коде: rand.nextInt(7) == 1, шанс 1/7
-    emerald_ore:
-      multiplier: 1.0
-      generator-type: minable
-      base-chance: 0.5 # rand.nextInt(7) == 1, шанс 1/7 ≈ 0.142857
-      vein-size: 2
-    deepslate_emerald_ore:
-      multiplier: 1.0
-      generator-type: minable
-      base-chance: 0.5
-      vein-size: 2
+      # Изумрудная руда - используется MINABLE
+      # Используется ванильная генерация (высокие горы, от -16 до 320)
+      # Не урезается, так как нужен для торговли с жителями
+      emerald_ore:
+        multiplier: 1.0
+        generator-type: minable
+        base-chance: 1.0 # Ванильная частота генерации
+        vein-size: 3
+        attempts: 2 # Увеличено для более частого спавна
+      deepslate_emerald_ore:
+        multiplier: 1.0
+        generator-type: minable
+        base-chance: 1.0 # Ванильная частота генерации
+        vein-size: 3
+        attempts: 2 # Увеличено для более частого спавна
 
-    # Блоки сырого железа - используется MINABLE
-    raw_iron_block:
-      multiplier: 1.0
-      generator-type: minable
-      base-chance: 0.1 # Примерная частота
-      vein-size: 5
-    raw_copper_block:
-      multiplier: 1.0
-      generator-type: minable
-      base-chance: 0.1 # Примерная частота
-      vein-size: 5
+      # Блоки сырого железа - используется MINABLE
+      raw_iron_block:
+        multiplier: 1.0
+        generator-type: minable
+        base-chance: 0.1 # Примерная частота
+        vein-size: 5
+      raw_copper_block:
+        multiplier: 1.0
+        generator-type: minable
+        base-chance: 0.1 # Примерная частота
+        vein-size: 5
 
-  world_nether:
-    # Адские руды
-    # Кварц руда - используется MINABLE (частая)
-    nether_quartz_ore:
-      multiplier: 1.0
-      generator-type: minable
-      base-chance: 0.5 # Примерная частота
-      vein-size: 14
+    world_nether:
+      # Адские руды
+      # Кварц руда - используется MINABLE (частая)
+      nether_quartz_ore:
+        multiplier: 1.0
+        generator-type: minable
+        base-chance: 0.5 # Примерная частота
+        vein-size: 14
 
-    # Золотая адская руда - используется MINABLE
-    nether_gold_ore:
-      multiplier: 1.0
-      generator-type: minable
-      base-chance: 0.5 # Примерная частота
-      vein-size: 10
+      # Золотая адская руда - используется MINABLE
+      nether_gold_ore:
+        multiplier: 1.0
+        generator-type: minable
+        base-chance: 0.5 # Примерная частота
+        vein-size: 10
 
-    # Незерит - используется MINABLE (очень редкая)
-    ancient_debris:
-      multiplier: 1.0
-      generator-type: minable
-      base-chance: 1.0 # Очень редкая руда
-      vein-size: 2
+      # Незерит - используется MINABLE (очень редкая)
+      ancient_debris:
+        multiplier: 1.0
+        generator-type: minable
+        base-chance: 1.0 # Очень редкая руда
+        vein-size: 2

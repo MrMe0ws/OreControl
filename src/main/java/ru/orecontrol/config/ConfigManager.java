@@ -16,6 +16,7 @@ public class ConfigManager {
     private final Map<String, Map<Material, OreNFCConfig>> worldOreNFCConfigs;
     private boolean enabled;
     private boolean nfcGeneration;
+    private boolean debugLogging;
 
     public ConfigManager(OreControl plugin) {
         this.plugin = plugin;
@@ -32,11 +33,24 @@ public class ConfigManager {
 
         // Загружаем статус включения/выключения плагина
         enabled = config.getBoolean("enabled", true);
-        nfcGeneration = config.getBoolean("nfc-generation", false);
+
+        // Читаем use-nfc-generation (boolean флаг для включения/выключения
+        // NFC-генерации)
+        // Используем отдельный ключ, чтобы избежать конфликта с секцией nfc-generation:
+        nfcGeneration = config.getBoolean("use-nfc-generation", false);
+
+        debugLogging = config.getBoolean("debug-logging", false);
+
+        // Отладочный лог для проверки загрузки настроек
+        plugin.getLogger().info("Загружено: enabled=" + enabled + ", use-nfc-generation=" + nfcGeneration
+                + ", debug-logging=" + debugLogging);
 
         // Определяем секцию для загрузки настроек
         String configSection = nfcGeneration ? "nfc-generation" : "default-generation";
         String worldsPath = configSection + ".worlds";
+
+        plugin.getLogger().info(
+                "Попытка загрузить настройки из секции: " + worldsPath + " (nfcGeneration=" + nfcGeneration + ")");
 
         if (config.contains(worldsPath)) {
             ConfigurationSection worldsSection = config.getConfigurationSection(worldsPath);
@@ -51,12 +65,48 @@ public class ConfigManager {
                         ConfigurationSection worldSection = config.getConfigurationSection(worldPath);
                         if (worldSection != null) {
                             for (String oreName : worldSection.getKeys(false)) {
+                                // Пропускаем ключи, которые не являются названиями руд
+                                // (например, комментарии или другие служебные ключи)
+                                if (oreName.startsWith("#") || oreName.trim().isEmpty()) {
+                                    continue;
+                                }
+
+                                // Пропускаем ключи, которые явно являются параметрами конфигурации
+                                // (это параметры внутри секций руд, которые не должны быть на уровне мира)
+                                if (oreName.equals("multiplier") || oreName.equals("generator-type") ||
+                                        oreName.equals("base-chance") || oreName.equals("vein-size") ||
+                                        oreName.equals("radius") || oreName.equals("density") ||
+                                        oreName.equals("amount") || oreName.equals("veins")) {
+                                    continue;
+                                }
+
+                                // Получаем значение для этого ключа
+                                Object oreValue = worldSection.get(oreName);
+
+                                // Пропускаем ключи, которые не являются секциями или числами
+                                // (это могут быть параметры конфигурации, которые попали на неправильный
+                                // уровень)
+                                if (!(oreValue instanceof ConfigurationSection) && !(oreValue instanceof Number)) {
+                                    // Пропускаем невалидные ключи (например, параметры конфигурации на неправильном
+                                    // уровне)
+                                    continue;
+                                }
+
+                                // Пытаемся преобразовать в Material - если не получается, пропускаем без
+                                // предупреждения
+                                // (это могут быть параметры конфигурации или другие служебные ключи)
+                                Material material;
                                 try {
-                                    Material material = Material.valueOf(oreName.toUpperCase());
+                                    material = Material.valueOf(oreName.toUpperCase());
+                                } catch (IllegalArgumentException e) {
+                                    // Не является валидным Material - пропускаем (это не руда)
+                                    continue;
+                                }
+
+                                try {
 
                                     if (nfcGeneration) {
                                         // Загружаем NFC конфигурацию
-                                        Object oreValue = worldSection.get(oreName);
                                         if (oreValue instanceof ConfigurationSection) {
                                             // Расширенный формат
                                             ConfigurationSection oreSection = (ConfigurationSection) oreValue;
@@ -79,9 +129,10 @@ public class ConfigManager {
                                             int density = oreSection.getInt("density", getDefaultDensity(material));
                                             int amount = oreSection.getInt("amount", getDefaultAmount(material));
                                             int veins = oreSection.getInt("veins", getDefaultVeins(material));
+                                            int attempts = oreSection.getInt("attempts", getDefaultAttempts(material));
 
                                             nfcConfigs.put(material, new OreNFCConfig(material, multiplier, genType,
-                                                    baseChance, veinSize, radius, density, amount, veins));
+                                                    baseChance, veinSize, radius, density, amount, veins, attempts));
                                             multipliers.put(material, multiplier);
                                         } else if (oreValue instanceof Number) {
                                             // Простой формат (только множитель)
@@ -96,17 +147,21 @@ public class ConfigManager {
                                             int density = getDefaultDensity(material);
                                             int amount = getDefaultAmount(material);
                                             int veins = getDefaultVeins(material);
+                                            int attempts = getDefaultAttempts(material);
 
                                             nfcConfigs.put(material, new OreNFCConfig(material, multiplier, genType,
-                                                    baseChance, veinSize, radius, density, amount, veins));
+                                                    baseChance, veinSize, radius, density, amount, veins, attempts));
                                         }
                                     } else {
                                         // Старая логика (default-generation) - только множитель
                                         double multiplier = config.getDouble(worldPath + "." + oreName, 1.0);
                                         multipliers.put(material, multiplier);
                                     }
-                                } catch (IllegalArgumentException e) {
-                                    plugin.getLogger().warning("Неизвестный тип руды: " + oreName);
+                                } catch (Exception e) {
+                                    // Игнорируем ошибки при загрузке конфигурации для конкретной руды
+                                    // (невалидные ключи уже обработаны выше)
+                                    plugin.getLogger().fine(
+                                            "Ошибка при загрузке конфигурации для " + oreName + ": " + e.getMessage());
                                 }
                             }
                         }
@@ -122,8 +177,12 @@ public class ConfigManager {
 
         if (enabled) {
             String mode = nfcGeneration ? "NFC-generation" : "стандартная";
-            plugin.getLogger()
-                    .info("Загружено настроек для " + worldOreMultipliers.size() + " миров (режим: " + mode + ")");
+            int totalOres = 0;
+            for (Map<Material, Double> multipliers : worldOreMultipliers.values()) {
+                totalOres += multipliers.size();
+            }
+            plugin.getLogger().info("Загружено настроек для " + worldOreMultipliers.size() + " мир(ов), " + totalOres
+                    + " тип(ов) руд (режим: " + mode + ")");
         } else {
             plugin.getLogger().info("Плагин отключен в конфигурации");
         }
@@ -276,6 +335,22 @@ public class ConfigManager {
         return 3; // Дефолтное количество жил
     }
 
+    private int getDefaultAttempts(Material material) {
+        // Количество попыток генерации на основе оригинального кода Beta 1.7.3
+        // В оригинале некоторые руды генерировались в циклах:
+        if (material == Material.REDSTONE_ORE || material == Material.DEEPSLATE_REDSTONE_ORE) {
+            return 3; // for (int k2 = 0; k2 < 3; k2++)
+        }
+        if (material == Material.COPPER_ORE || material == Material.DEEPSLATE_COPPER_ORE) {
+            return 4; // for (int k2 = 0; k2 < (3 + rand.nextInt(4)); k2++) - среднее значение 4-5
+        }
+        if (material == Material.COAL_ORE || material == Material.DEEPSLATE_COAL_ORE) {
+            return 2; // for (int k2 = 0; k2 < (1 + rand.nextInt(2)); k2++) - среднее значение 1-2
+        }
+        // Для остальных руд генерируем один раз
+        return 1;
+    }
+
     public double getOreMultiplier(World world, Material material) {
         String worldName = world.getName();
         Map<Material, Double> multipliers = worldOreMultipliers.get(worldName);
@@ -308,6 +383,10 @@ public class ConfigManager {
         return nfcGeneration;
     }
 
+    public boolean isDebugLogging() {
+        return debugLogging;
+    }
+
     public OreNFCConfig getOreNFCConfig(World world, Material material) {
         if (!nfcGeneration) {
             return null;
@@ -324,5 +403,9 @@ public class ConfigManager {
         worldOreMultipliers.clear();
         worldOreNFCConfigs.clear();
         loadConfig();
+    }
+
+    public OreControl getPlugin() {
+        return plugin;
     }
 }
