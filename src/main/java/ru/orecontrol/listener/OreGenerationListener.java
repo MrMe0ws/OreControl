@@ -39,8 +39,12 @@ public class OreGenerationListener implements Listener {
             return;
         }
 
-        // Удаляем стандартную генерацию руды и применяем свою
+        // Удаляем ванильную руду для всех руд из конфига
+        // Это нужно, чтобы наша генерация полностью контролировала спавн руды
+        // независимо от режима (default-generation или nfc-generation)
         removeStandardOres(event);
+
+        // Применяем свою генерацию
         generateCustomOres(event);
     }
 
@@ -68,12 +72,14 @@ public class OreGenerationListener implements Listener {
                 Material.ANCIENT_DEBRIS
         };
 
-        // Создаем карту руд, которые нужно заменить (множитель != 1.0)
+        // Создаем карту руд, которые нужно заменить
+        // Удаляем ванильную руду только для тех руд, которые есть в конфиге
+        // Это нужно, чтобы наша генерация полностью контролировала спавн руды
         Map<Material, Material> replacementMap = new HashMap<>();
         for (Material ore : ores) {
-            double multiplier = configManager.getOreMultiplier(world, ore);
-            // Пропускаем, если множитель = 1.0 (стандартная генерация)
-            if (multiplier != 1.0) {
+            // Проверяем, есть ли эта руда в конфиге для этого мира
+            // Если есть - удаляем ванильную руду, чтобы контролировать генерацию
+            if (configManager.hasOreConfig(world, ore)) {
                 replacementMap.put(ore, getReplacementBlock(ore, world));
             }
         }
@@ -83,7 +89,8 @@ public class OreGenerationListener implements Listener {
             return;
         }
 
-        // Оптимизация: проходим по блокам только один раз, проверяя все руды одновременно
+        // Оптимизация: проходим по блокам только один раз, проверяя все руды
+        // одновременно
         // Используем ChunkSnapshot для более быстрого чтения
         org.bukkit.ChunkSnapshot snapshot = chunk.getChunkSnapshot();
         int minY = world.getMinHeight();
@@ -94,7 +101,7 @@ public class OreGenerationListener implements Listener {
                 for (int y = minY; y < maxY; y++) {
                     Material blockType = snapshot.getBlockType(x, y, z);
                     Material replacement = replacementMap.get(blockType);
-                    
+
                     if (replacement != null) {
                         // Используем chunk.getBlock() только когда нужно изменить блок
                         Block block = chunk.getBlock(x, y, z);

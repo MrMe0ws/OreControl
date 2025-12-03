@@ -6,6 +6,10 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.generator.BlockPopulator;
 import ru.orecontrol.config.ConfigManager;
+import ru.orecontrol.config.OreNFCConfig;
+import ru.orecontrol.generator.nfc.NFCWorldGenConcentrated;
+import ru.orecontrol.generator.nfc.NFCWorldGenMinable;
+import ru.orecontrol.generator.nfc.NFCWorldGenMinableCloud;
 
 import java.util.Random;
 
@@ -35,13 +39,21 @@ public class CustomOrePopulator extends BlockPopulator {
 
     @Override
     public void populate(World world, Random random, Chunk chunk) {
-        // Генерируем руды для обычного мира
-        if (world.getEnvironment() == World.Environment.NORMAL) {
-            generateOverworldOres(world, random, chunk);
-        }
-        // Генерируем руды для ада
-        else if (world.getEnvironment() == World.Environment.NETHER) {
-            generateNetherOres(world, random, chunk);
+        // Проверяем, используется ли NFC-generation
+        if (configManager.isNFCGeneration()) {
+            // Используем NFC-генерацию
+            if (world.getEnvironment() == World.Environment.NORMAL) {
+                generateNFCOverworldOres(world, random, chunk);
+            } else if (world.getEnvironment() == World.Environment.NETHER) {
+                generateNFCNetherOres(world, random, chunk);
+            }
+        } else {
+            // Используем старую логику
+            if (world.getEnvironment() == World.Environment.NORMAL) {
+                generateOverworldOres(world, random, chunk);
+            } else if (world.getEnvironment() == World.Environment.NETHER) {
+                generateNetherOres(world, random, chunk);
+            }
         }
     }
 
@@ -112,6 +124,179 @@ public class CustomOrePopulator extends BlockPopulator {
         generateOre(world, random, chunk,
                 Material.ANCIENT_DEBRIS, null,
                 ANCIENT_DEBRIS_VEINS_PER_CHUNK, 8, 119, 2);
+    }
+
+    // NFC-генерация для обычного мира
+    // ВАЖНО: Генерируем и обычные, и deepslate версии руд отдельно
+    // Это позволяет независимо контролировать их генерацию через конфиг
+    // Deepslate руды (1.19+) генерируются отдельно и имеют свои настройки
+    private void generateNFCOverworldOres(World world, Random random, Chunk chunk) {
+        Material[] ores = {
+                // Обычные руды
+                Material.COAL_ORE, Material.COPPER_ORE, Material.IRON_ORE, Material.GOLD_ORE,
+                Material.DIAMOND_ORE, Material.REDSTONE_ORE, Material.LAPIS_ORE, Material.EMERALD_ORE,
+                // Deepslate руды (1.19+)
+                Material.DEEPSLATE_COAL_ORE, Material.DEEPSLATE_COPPER_ORE, Material.DEEPSLATE_IRON_ORE,
+                Material.DEEPSLATE_GOLD_ORE, Material.DEEPSLATE_DIAMOND_ORE, Material.DEEPSLATE_REDSTONE_ORE,
+                Material.DEEPSLATE_LAPIS_ORE, Material.DEEPSLATE_EMERALD_ORE,
+                // Блоки сырого железа и меди
+                Material.RAW_IRON_BLOCK, Material.RAW_COPPER_BLOCK
+        };
+
+        int chunkX = chunk.getX() * 16;
+        int chunkZ = chunk.getZ() * 16;
+
+        for (Material ore : ores) {
+            generateNFCOre(world, random, chunk, chunkX, chunkZ, ore);
+        }
+    }
+
+    // NFC-генерация для ада
+    private void generateNFCNetherOres(World world, Random random, Chunk chunk) {
+        Material[] ores = {
+                Material.NETHER_QUARTZ_ORE,
+                Material.NETHER_GOLD_ORE,
+                Material.ANCIENT_DEBRIS
+        };
+
+        int chunkX = chunk.getX() * 16;
+        int chunkZ = chunk.getZ() * 16;
+
+        for (Material ore : ores) {
+            generateNFCOre(world, random, chunk, chunkX, chunkZ, ore);
+        }
+    }
+
+    // Генерация руды с использованием NFC-логики
+    private void generateNFCOre(World world, Random random, Chunk chunk, int chunkX, int chunkZ, Material oreType) {
+        OreNFCConfig config = configManager.getOreNFCConfig(world, oreType);
+
+        // Если нет конфига для этой руды, пропускаем
+        if (config == null) {
+            return;
+        }
+
+        // Если множитель 0, не генерируем
+        if (config.getMultiplier() == 0.0) {
+            return;
+        }
+
+        // Вычисляем финальный шанс с учетом множителя
+        double finalChance = config.getFinalChance();
+
+        // Проверяем шанс генерации
+        if (random.nextDouble() >= finalChance) {
+            return;
+        }
+
+        // Определяем глубинный вариант
+        Material deepslateType = null;
+        Material baseOreType = oreType;
+
+        if (oreType.name().startsWith("DEEPSLATE_")) {
+            // Это уже глубинный вариант - используем его как основной
+            // deepslateType остается null, так как это уже deepslate
+            baseOreType = oreType;
+        } else {
+            // Это обычный вариант - ищем соответствующий глубинный вариант
+            try {
+                deepslateType = Material.valueOf("DEEPSLATE_" + oreType.name());
+            } catch (IllegalArgumentException e) {
+                // Нет глубинного варианта
+            }
+            baseOreType = oreType;
+        }
+
+        // Определяем блок, в котором генерируется руда
+        Material generateIn = getGenerateInBlock(world, oreType);
+
+        // Генерируем случайную позицию в чанке
+        int x = chunkX + random.nextInt(16);
+        int z = chunkZ + random.nextInt(16);
+        int y = getRandomY(world, oreType, random);
+
+        // Генерируем в зависимости от типа генератора
+        switch (config.getGeneratorType()) {
+            case MINABLE:
+                NFCWorldGenMinable minable = new NFCWorldGenMinable(
+                        baseOreType, deepslateType, config.getVeinSize(), generateIn);
+                minable.generate(world, random, chunk, chunkX, chunkZ, x, y, z);
+                break;
+
+            case CONCENTRATED:
+                NFCWorldGenConcentrated concentrated = new NFCWorldGenConcentrated(
+                        baseOreType, deepslateType, config.getRadius(), config.getVeins(),
+                        config.getVeinSize(), generateIn);
+                concentrated.generate(world, random, chunk, chunkX, chunkZ, x, y, z);
+                break;
+
+            case CLOUD:
+                NFCWorldGenMinableCloud cloud = new NFCWorldGenMinableCloud(
+                        baseOreType, deepslateType, config.getRadius(), config.getDensity(),
+                        config.getAmount(), generateIn);
+                cloud.generate(world, random, chunk, chunkX, chunkZ, x, y, z);
+                break;
+        }
+    }
+
+    private Material getGenerateInBlock(World world, Material ore) {
+        if (world.getEnvironment() == World.Environment.NETHER) {
+            return Material.NETHERRACK;
+        } else {
+            // Для deepslate руд используем DEEPSLATE, для остальных - STONE
+            if (ore.name().startsWith("DEEPSLATE_")) {
+                return Material.DEEPSLATE;
+            }
+            if (ore == Material.RAW_IRON_BLOCK || ore == Material.RAW_COPPER_BLOCK) {
+                return Material.STONE;
+            }
+            return Material.STONE;
+        }
+    }
+
+    private int getRandomY(World world, Material ore, Random random) {
+        // Получаем базовое имя руды (без DEEPSLATE_ префикса)
+        String oreName = ore.name();
+        boolean isDeepslate = oreName.startsWith("DEEPSLATE_");
+        if (isDeepslate) {
+            oreName = oreName.replace("DEEPSLATE_", "");
+        }
+
+        // Для deepslate руд генерируем в основном ниже Y=0 (глубинные слои)
+        // Для обычных руд используем стандартные диапазоны
+        int y;
+
+        if (oreName.equals("COAL_ORE")) {
+            y = isDeepslate ? random.nextInt(64) - 64 : random.nextInt(192);
+        } else if (oreName.equals("COPPER_ORE")) {
+            y = isDeepslate ? random.nextInt(64) - 64 : random.nextInt(128) - 16;
+        } else if (oreName.equals("IRON_ORE")) {
+            y = isDeepslate ? random.nextInt(64) - 64 : random.nextInt(136) - 64;
+        } else if (oreName.equals("GOLD_ORE")) {
+            y = isDeepslate ? random.nextInt(32) - 64 : random.nextInt(96) - 64;
+        } else if (oreName.equals("DIAMOND_ORE")) {
+            y = isDeepslate ? random.nextInt(16) - 64 : random.nextInt(80) - 64;
+        } else if (oreName.equals("REDSTONE_ORE")) {
+            y = isDeepslate ? random.nextInt(16) - 64 : random.nextInt(80) - 64;
+        } else if (oreName.equals("LAPIS_ORE")) {
+            y = isDeepslate ? random.nextInt(32) - 64 : random.nextInt(128) - 64;
+        } else if (oreName.equals("EMERALD_ORE")) {
+            y = isDeepslate ? random.nextInt(16) - 64 : random.nextInt(336) - 16;
+        } else if (ore == Material.RAW_IRON_BLOCK || ore == Material.RAW_COPPER_BLOCK) {
+            y = random.nextInt(128) - 64;
+        } else if (ore == Material.NETHER_QUARTZ_ORE) {
+            y = random.nextInt(107) + 10;
+        } else if (ore == Material.NETHER_GOLD_ORE) {
+            y = random.nextInt(107) + 10;
+        } else if (ore == Material.ANCIENT_DEBRIS) {
+            y = random.nextInt(112) + 8;
+        } else {
+            // По умолчанию
+            y = random.nextInt(world.getMaxHeight() - world.getMinHeight()) + world.getMinHeight();
+        }
+
+        // Ограничиваем Y в пределах мира
+        return Math.max(world.getMinHeight(), Math.min(world.getMaxHeight() - 1, y));
     }
 
     private void generateOre(World world, Random random, Chunk chunk,
