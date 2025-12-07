@@ -209,17 +209,33 @@ public class CustomOrePopulator extends BlockPopulator {
     // конфигурацию
     private void generateNFCOverworldOres(World world, Random random, Chunk chunk, Map<Material, Integer> oreStats) {
         Material[] ores = {
-                // Обычные руды (deepslate версии определяются автоматически по высоте)
+                // Обычные руды
                 Material.COAL_ORE, Material.COPPER_ORE, Material.IRON_ORE, Material.GOLD_ORE,
                 Material.DIAMOND_ORE, Material.REDSTONE_ORE, Material.LAPIS_ORE, Material.EMERALD_ORE,
                 // Блоки сырого железа и меди
                 Material.RAW_IRON_BLOCK, Material.RAW_COPPER_BLOCK
         };
 
+        Material[] deepslateOres = {
+                // Глубинные руды (генерируются отдельно с настройками из конфига)
+                Material.DEEPSLATE_COAL_ORE, Material.DEEPSLATE_COPPER_ORE, Material.DEEPSLATE_IRON_ORE,
+                Material.DEEPSLATE_GOLD_ORE, Material.DEEPSLATE_DIAMOND_ORE, Material.DEEPSLATE_REDSTONE_ORE,
+                Material.DEEPSLATE_LAPIS_ORE, Material.DEEPSLATE_EMERALD_ORE
+        };
+
         int chunkX = chunk.getX() * 16;
         int chunkZ = chunk.getZ() * 16;
 
+        // Генерируем обычные руды
         for (Material ore : ores) {
+            int count = generateNFCOre(world, random, chunk, chunkX, chunkZ, ore);
+            if (oreStats != null && count > 0) {
+                oreStats.put(ore, oreStats.getOrDefault(ore, 0) + count);
+            }
+        }
+
+        // Генерируем глубинные руды отдельно
+        for (Material ore : deepslateOres) {
             int count = generateNFCOre(world, random, chunk, chunkX, chunkZ, ore);
             if (oreStats != null && count > 0) {
                 oreStats.put(ore, oreStats.getOrDefault(ore, 0) + count);
@@ -359,40 +375,26 @@ public class CustomOrePopulator extends BlockPopulator {
         int y;
 
         if (oreName.equals("COAL_ORE")) {
-            // Уголь: оригинал 0-81 (CONCENTRATED) и 48-95 (MINABLE)
-            // Адаптируем: обычный уголь -64 до 95 (полный диапазон, deepslate генерируется
-            // автоматически ниже Y=0)
-            y = isDeepslate ? random.nextInt(64) - 64 : random.nextInt(160) - 64;
+            // Уголь: обычный 0-329, глубин -64 до 0
+            y = isDeepslate ? random.nextInt(65) - 64 : random.nextInt(330);
         } else if (oreName.equals("COPPER_ORE")) {
-            // Медь: оригинал 38-81
-            // Адаптируем: обычная медь -64 до 81 (полный диапазон, deepslate генерируется
-            // автоматически ниже Y=0)
-            y = isDeepslate ? random.nextInt(64) - 64 : random.nextInt(146) - 64;
+            // Медь: обычная 0-112, глубин -16 до 0
+            y = isDeepslate ? random.nextInt(17) - 16 : random.nextInt(113);
         } else if (oreName.equals("IRON_ORE")) {
-            // Железо: оригинал 2-33
-            // Адаптируем: обычное железо -64 до 33 (полный диапазон, deepslate генерируется
-            // автоматически ниже Y=0)
-            y = isDeepslate ? random.nextInt(64) - 64 : random.nextInt(98) - 64;
+            // Железо: обычное 0-70, глубин -64 до 0
+            y = isDeepslate ? random.nextInt(65) - 64 : random.nextInt(71);
         } else if (oreName.equals("GOLD_ORE")) {
-            // Золото: оригинал 0-59
-            // Адаптируем: обычное золото -64 до 59 (полный диапазон, deepslate генерируется
-            // автоматически ниже Y=0)
-            y = isDeepslate ? random.nextInt(64) - 64 : random.nextInt(124) - 64;
+            // Золото: обычное 0-32, глубин -64 до 0
+            y = isDeepslate ? random.nextInt(65) - 64 : random.nextInt(33);
         } else if (oreName.equals("DIAMOND_ORE")) {
-            // Алмаз: оригинал 0-15
-            // Адаптируем: обычный алмаз -64 до 15 (полный диапазон, deepslate генерируется
-            // автоматически ниже Y=0)
-            y = isDeepslate ? random.nextInt(64) - 64 : random.nextInt(80) - 64;
+            // Алмаз: обычный 0-16, глубин -64 до 0
+            y = isDeepslate ? random.nextInt(65) - 64 : random.nextInt(17);
         } else if (oreName.equals("REDSTONE_ORE")) {
-            // Редстоун: оригинал 0-15
-            // Адаптируем: обычный редстоун -64 до 15 (полный диапазон, deepslate
-            // генерируется автоматически ниже Y=0)
-            y = isDeepslate ? random.nextInt(64) - 64 : random.nextInt(80) - 64;
+            // Редстоун: обычный 0-16, глубин -64 до 0
+            y = isDeepslate ? random.nextInt(65) - 64 : random.nextInt(17);
         } else if (oreName.equals("LAPIS_ORE")) {
-            // Лазурит: оригинал 0-31
-            // Адаптируем: обычный лазурит -64 до 31 (полный диапазон, deepslate
-            // генерируется автоматически ниже Y=0)
-            y = isDeepslate ? random.nextInt(64) - 64 : random.nextInt(96) - 64;
+            // Лазурит: обычный 0-64, глубин -64 до 0
+            y = isDeepslate ? random.nextInt(65) - 64 : random.nextInt(65);
         } else if (oreName.equals("EMERALD_ORE")) {
             // Изумруд: используем ванильную генерацию (высокие горы)
             // В ваниле изумруды генерируются от -16 до 320, но чаще в горах
@@ -402,11 +404,14 @@ public class CustomOrePopulator extends BlockPopulator {
         } else if (ore == Material.RAW_IRON_BLOCK || ore == Material.RAW_COPPER_BLOCK) {
             y = random.nextInt(128) - 64;
         } else if (ore == Material.NETHER_QUARTZ_ORE) {
-            y = random.nextInt(107) + 10;
+            // Кварц: 10-125
+            y = random.nextInt(116) + 10; // Y от 10 до 125 (10 + 116 - 1 = 125)
         } else if (ore == Material.NETHER_GOLD_ORE) {
-            y = random.nextInt(107) + 10;
+            // Адское золото: 10-117
+            y = random.nextInt(108) + 10; // Y от 10 до 117 (10 + 108 - 1 = 117)
         } else if (ore == Material.ANCIENT_DEBRIS) {
-            y = random.nextInt(112) + 8;
+            // В ванили незерит генерируется только на Y 8-22
+            y = random.nextInt(15) + 8; // Y от 8 до 22 (8 + 15 - 1 = 22)
         } else {
             // По умолчанию
             y = random.nextInt(world.getMaxHeight() - world.getMinHeight()) + world.getMinHeight();
